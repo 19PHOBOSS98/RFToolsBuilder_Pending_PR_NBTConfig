@@ -488,9 +488,9 @@ public class GuiShapeCard extends BaseScreen implements IShapeParentGui, IKeyRec
     }
 
     @Override
-    public boolean mouseScrolledFromEvent(double x, double y, double amount) {
+    public boolean mouseScrolledFromEvent(double x, double y, double dx, double dy) {
         WindowManager manager = getWindow().getWindowManager();
-        manager.mouseScrolled(x, y, amount);
+        manager.mouseScrolled(x, y, dx);
         return true;
     }
 

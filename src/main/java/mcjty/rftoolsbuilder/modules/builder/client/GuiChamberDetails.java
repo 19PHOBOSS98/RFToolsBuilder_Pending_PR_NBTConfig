@@ -183,10 +183,9 @@ public class GuiChamberDetails extends GuiItemScreen {
     }
 
     @Override
-    protected void renderInternal(GuiGraphics graphics, int pMouseX, int pMouseY, float pPartialTick) {
+    protected void renderInternal(GuiGraphics graphics, int pMouseX, int pMouseY, float partialTick) {
         populateLists();
-
-        drawWindow(graphics);
+        drawWindow(graphics, pMouseX, pMouseY, partialTick);
     }
 
     public static void open() {
