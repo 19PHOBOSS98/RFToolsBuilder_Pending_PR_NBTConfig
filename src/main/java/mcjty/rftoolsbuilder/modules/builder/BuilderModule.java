@@ -33,7 +33,6 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 
-import java.util.ArrayList;
 import java.util.function.Supplier;
 
 import static mcjty.lib.datagen.DataGen.has;
@@ -94,18 +93,8 @@ public class BuilderModule implements IModule {
         BuilderConfiguration.init(Config.SERVER_BUILDER, Config.CLIENT_BUILDER);
     }
 
-    public static void x(Integer... b) {
-
-    }
-
     @Override
     public void initDatagen(DataGen dataGen) {
-
-        ArrayList<Integer> a = new ArrayList<>();
-        a.add(3);
-        a.add(5);
-        x(a.toArray(new Integer[0]));
-
         dataGen.add(
                 Dob.blockBuilder(BUILDER)
                         .ironPickaxeTags()
