@@ -14,18 +14,18 @@ import javax.annotation.Nonnull;
 
 public class ProjectorRenderer implements BlockEntityRenderer<ProjectorTileEntity> {
 
-    private static RenderSystem renderSystem;
+    private static Renderer renderer;
 
     public ProjectorRenderer(BlockEntityRendererProvider.Context context) {
     }
 
     @Override
     public void render(@Nonnull ProjectorTileEntity te, float partialTicks, @Nonnull PoseStack matrixStack, @Nonnull MultiBufferSource buffer, int combinedLight, int combinedOverlay) {
-        if (renderSystem == null) {
-            renderSystem = new RenderSystem();
+        if (renderer == null) {
+            renderer = new Renderer();
         }
         Level level = te.getLevel();
-        renderSystem.render(matrixStack, te.getBlockPos(), level.random);
+        renderer.render(matrixStack, te.getBlockPos(), level.random);
     }
 
     public static void register() {
