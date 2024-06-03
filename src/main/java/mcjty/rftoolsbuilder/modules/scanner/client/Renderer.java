@@ -50,13 +50,28 @@ public class Renderer {
     }
 
     public void render(PoseStack poseStack, BlockPos pos, RandomSource random) {
+        BlockState cobble = Blocks.COBBLESTONE.defaultBlockState();
+        BlockState planks = Blocks.OAK_PLANKS.defaultBlockState();
+        BlockState glass = Blocks.GLASS.defaultBlockState();
         var blocks = new Bl.Builder()
-                .add(pos, Blocks.COBBLESTONE.defaultBlockState())
-                .add(pos.east(), Blocks.COBBLESTONE.defaultBlockState())
-                .add(pos.west(), Blocks.COBBLESTONE.defaultBlockState())
-                .add(pos.north(), Blocks.COBBLESTONE.defaultBlockState())
-                .add(pos.south(), Blocks.COBBLESTONE.defaultBlockState())
+                .add(pos, cobble)
+                .add(pos.east(), cobble)
+                .add(pos.west(), cobble)
+                .add(pos.north(), cobble)
+                .add(pos.south(), cobble)
+                .add(pos.east().above(), glass)
+                .add(pos.west().above(), glass)
+                .add(pos.north().above(), glass)
+                .add(pos.south().above(), glass)
+                .add(pos.east().east(), planks)
+                .add(pos.west().west(), planks)
+                .add(pos.north().north(), planks)
+                .add(pos.south().south(), planks)
                 .add(pos.above(), Blocks.BAMBOO.defaultBlockState())
+                .add(pos.east().south(), cobble)
+                .add(pos.east().north(), cobble)
+                .add(pos.west().south(), cobble)
+                .add(pos.west().north(), cobble)
                 .build();
 
         buildBuffer(random, blocks);
@@ -148,16 +163,18 @@ public class Renderer {
 
         // Buffer building needs to use a disjoint PoseStack to build the buffer without camera position/orientation context
         PoseStack buildingPoseStack = new PoseStack();
-        buildingPoseStack.pushPose();
         for (RenderType renderType : RenderType.chunkBufferLayers()) {
             BufferBuilder builder = fixedBuffers.builder(renderType);
             builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK);
             for (Bl block : blocks) {
+                buildingPoseStack.pushPose();
+                buildingPoseStack.scale(0.2f, 0.2f, 0.2f);
+                buildingPoseStack.translate(block.pos.getX()-blocks.get(0).pos.getX(), block.pos.getY()-blocks.get(0).pos.getY(), block.pos.getZ()-blocks.get(0).pos.getZ());
                 BlockState state = block.state;
                 blockRenderer.renderBatched(state, block.pos, level, buildingPoseStack, builder, false, random, ModelData.EMPTY, renderType);
+                buildingPoseStack.popPose();
             }
         }
-        buildingPoseStack.popPose();
 
         // Upload buffers
         for (RenderType renderType : RenderType.chunkBufferLayers()) {
