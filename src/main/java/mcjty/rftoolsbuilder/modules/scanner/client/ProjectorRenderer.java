@@ -23,9 +23,9 @@ public class ProjectorRenderer implements BlockEntityRenderer<ProjectorTileEntit
     public void render(@Nonnull ProjectorTileEntity te, float partialTicks, @Nonnull PoseStack matrixStack, @Nonnull MultiBufferSource buffer, int combinedLight, int combinedOverlay) {
         if (renderer == null) {
             renderer = new Renderer();
+            renderer.buildBuffer(te.getBlockPos());
         }
-        Level level = te.getLevel();
-        renderer.render(matrixStack, te.getBlockPos(), level.random);
+        renderer.render(matrixStack, te.getBlockPos());
     }
 
     public static void register() {

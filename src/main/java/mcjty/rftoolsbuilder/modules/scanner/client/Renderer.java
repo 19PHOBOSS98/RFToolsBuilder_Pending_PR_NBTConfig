@@ -49,11 +49,11 @@ public class Renderer {
         }
     }
 
-    public void render(PoseStack poseStack, BlockPos pos, RandomSource random) {
+    private static List<Bl> setupBlocks(BlockPos pos) {
         BlockState cobble = Blocks.COBBLESTONE.defaultBlockState();
         BlockState planks = Blocks.OAK_PLANKS.defaultBlockState();
         BlockState glass = Blocks.GLASS.defaultBlockState();
-        var blocks = new Bl.Builder()
+        return new Bl.Builder()
                 .add(pos, cobble)
                 .add(pos.east(), cobble)
                 .add(pos.west(), cobble)
@@ -73,14 +73,14 @@ public class Renderer {
                 .add(pos.west().south(), cobble)
                 .add(pos.west().north(), cobble)
                 .build();
-
-        buildBuffer(random, blocks);
-        actualRender(poseStack, pos);
     }
 
-    private void actualRender(PoseStack poseStack, BlockPos pos) {
+    public void render(PoseStack poseStack, BlockPos pos) {
         // Pop off translation to BE position to render the buffer in world space
         poseStack.popPose();
+
+//        poseStack.pushPose();
+//        poseStack.scale(0.1f, 0.1f, 0.1f);
 
         var renderTypes = RenderType.chunkBufferLayers();
         for (RenderType renderType : renderTypes) {
@@ -154,11 +154,14 @@ public class Renderer {
         VertexBuffer.unbind();
 
         // Reinstate stack depth expected by BER
+//        poseStack.popPose();
         poseStack.pushPose();
     }
 
-    private void buildBuffer(RandomSource random, List<Bl> blocks) {
+    public void buildBuffer(BlockPos pos) {
+        var blocks = setupBlocks(pos);
         BlockRenderDispatcher blockRenderer = Minecraft.getInstance().getBlockRenderer();
+        RandomSource random = Minecraft.getInstance().level.getRandom();
         BlockAndTintGetter level = Minecraft.getInstance().level;
 
         // Buffer building needs to use a disjoint PoseStack to build the buffer without camera position/orientation context

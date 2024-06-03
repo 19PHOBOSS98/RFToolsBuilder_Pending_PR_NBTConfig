@@ -1,5 +1,6 @@
 {
   "type": "minecraft:crafting_shaped",
+  "category": "misc",
   "key": {
     "C": {
       "item": "minecraft:minecart"
@@ -18,5 +19,6 @@
   ],
   "result": {
     "item": "rftoolsbuilder:vehicle_card"
-  }
+  },
+  "show_notification": true
 }

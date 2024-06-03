@@ -1,5 +1,6 @@
 {
   "type": "minecraft:crafting_shaped",
+  "category": "misc",
   "key": {
     "G": {
       "tag": "forge:glass"
@@ -19,5 +20,6 @@
   "result": {
     "count": 8,
     "item": "rftoolsbuilder:green_shield_template_block"
-  }
+  },
+  "show_notification": true
 }
