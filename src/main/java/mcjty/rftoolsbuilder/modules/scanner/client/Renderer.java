@@ -2,6 +2,7 @@ package mcjty.rftoolsbuilder.modules.scanner.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
+import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ChunkBufferBuilderPack;
 import net.minecraft.client.renderer.RenderType;
@@ -12,10 +13,8 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.model.data.ModelData;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,31 +28,11 @@ public class Renderer {
         this.buffers = RenderType.chunkBufferLayers().stream().collect(Collectors.toMap(key -> key, key -> new VertexBuffer(VertexBuffer.Usage.STATIC)));
     }
 
-    record Bl(BlockPos pos, BlockState state) {
-        public static Bl of(BlockPos pos, BlockState state) {
-            return new Bl(pos, state);
-        }
-
-        // A builder for creating a list of Bl objects
-        public static class Builder {
-            private final List<Bl> list = new ArrayList<>();
-
-            public Builder add(BlockPos pos, BlockState state) {
-                list.add(Bl.of(pos, state));
-                return this;
-            }
-
-            public List<Bl> build() {
-                return list;
-            }
-        }
-    }
-
-    private static List<Bl> setupBlocks(BlockPos pos) {
+    private static List<BlockEntry> setupBlocks(BlockPos pos) {
         BlockState cobble = Blocks.COBBLESTONE.defaultBlockState();
         BlockState planks = Blocks.OAK_PLANKS.defaultBlockState();
         BlockState glass = Blocks.GLASS.defaultBlockState();
-        return new Bl.Builder()
+        return new BlockEntry.Builder()
                 .add(pos, cobble)
                 .add(pos.east(), cobble)
                 .add(pos.west(), cobble)
@@ -75,15 +54,15 @@ public class Renderer {
                 .build();
     }
 
-    public void render(PoseStack poseStack, BlockPos pos) {
-        // Pop off translation to BE position to render the buffer in world space
-        poseStack.popPose();
+    public void render(PoseStack poseStack) {
+        poseStack.pushPose();
+        poseStack.translate(0, 1, 0);
+        poseStack.scale(.2f, .2f, .2f);
+        int rot = (int)(System.currentTimeMillis() / 25L) % 360;
+        poseStack.mulPose(Axis.YP.rotationDegrees(rot));
 
-//        poseStack.pushPose();
-//        poseStack.scale(0.1f, 0.1f, 0.1f);
-
-        var renderTypes = RenderType.chunkBufferLayers();
-        for (RenderType renderType : renderTypes) {
+        var usedLayers = RenderType.chunkBufferLayers();
+        for (RenderType renderType : usedLayers) {
             // Setup GL state for render type
             renderType.setupRenderState();
 
@@ -125,14 +104,6 @@ public class Renderer {
             if (shader.GAME_TIME != null) {
                 shader.GAME_TIME.set(RenderSystem.getShaderGameTime());
             }
-            if (shader.CHUNK_OFFSET != null) {
-                // Set up the offset between the camera and the position where the buffer's origin should be rendered
-                Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-                double offX = (double) pos.getX() - cam.x;
-                double offY = (double) pos.getY() + 1 - cam.y;
-                double offZ = (double) pos.getZ() - cam.z;
-                shader.CHUNK_OFFSET.set((float) offX, (float) offY, (float) offZ);
-            }
 
             // Setup lighting
             RenderSystem.setupShaderLights(shader);
@@ -146,35 +117,32 @@ public class Renderer {
             renderType.clearRenderState();
 
             // Cleanup shader state
-            if (shader.CHUNK_OFFSET != null) {
-                shader.CHUNK_OFFSET.set(0.0F, 0.0F, 0.0F);
-            }
             shader.clear();
         }
         VertexBuffer.unbind();
 
-        // Reinstate stack depth expected by BER
-//        poseStack.popPose();
-        poseStack.pushPose();
+        poseStack.popPose();
     }
 
     public void buildBuffer(BlockPos pos) {
         var blocks = setupBlocks(pos);
         BlockRenderDispatcher blockRenderer = Minecraft.getInstance().getBlockRenderer();
         RandomSource random = Minecraft.getInstance().level.getRandom();
-        BlockAndTintGetter level = Minecraft.getInstance().level;
+        BlockAndTintGetter level = new DummyBlockGetter(Minecraft.getInstance().level.registryAccess(), blocks);
 
         // Buffer building needs to use a disjoint PoseStack to build the buffer without camera position/orientation context
         PoseStack buildingPoseStack = new PoseStack();
+        int relX = blocks.get(0).pos().getX();
+        int relY = blocks.get(0).pos().getY();
+        int relZ = blocks.get(0).pos().getZ();
         for (RenderType renderType : RenderType.chunkBufferLayers()) {
             BufferBuilder builder = fixedBuffers.builder(renderType);
             builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK);
-            for (Bl block : blocks) {
+            for (BlockEntry block : blocks) {
                 buildingPoseStack.pushPose();
-                buildingPoseStack.scale(0.2f, 0.2f, 0.2f);
-                buildingPoseStack.translate(block.pos.getX()-blocks.get(0).pos.getX(), block.pos.getY()-blocks.get(0).pos.getY(), block.pos.getZ()-blocks.get(0).pos.getZ());
-                BlockState state = block.state;
-                blockRenderer.renderBatched(state, block.pos, level, buildingPoseStack, builder, false, random, ModelData.EMPTY, renderType);
+                buildingPoseStack.translate(block.pos().getX()-relX, block.pos().getY()-relY, block.pos().getZ()-relZ);
+                BlockState state = block.state();
+                blockRenderer.renderBatched(state, block.pos(), level, buildingPoseStack, builder, false, random, ModelData.EMPTY, renderType);
                 buildingPoseStack.popPose();
             }
         }
