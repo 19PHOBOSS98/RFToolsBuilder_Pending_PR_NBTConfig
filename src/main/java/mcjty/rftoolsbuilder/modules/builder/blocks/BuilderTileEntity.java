@@ -1750,13 +1750,15 @@ public class BuilderTileEntity extends TickingTileEntity implements IHudSupport 
                 return;
             }
             if (destWorld.getBlockState(destPos).is(newState.getBlock())) {
-                destWorld.setBlock(destPos, newState, Block.UPDATE_ALL);  // placeBlockAt can reset the orientation. Restore it here
-
                 BlockEntity srcTileEntity = srcWorld.getBlockEntity(srcPos);
+                CompoundTag srcTC = null;
                 if (srcTileEntity != null) {
                     Block srcBlock = srcState.getBlock();
-                    CompoundTag tc = transferNBT(srcBlock,srcTileEntity);
-                    setTileEntityNBT(destWorld, tc, destPos, srcState);
+                    srcTC = copyBlockNBTData(srcBlock,srcTileEntity);
+                }
+                destWorld.setBlock(destPos, newState, Block.UPDATE_ALL);  // placeBlockAt can reset the orientation. Restore it here
+                if (srcTC != null) {
+                    transferBlockNBTDataTo(destWorld, srcTC, destPos, srcState);
                 }
 
             }
@@ -1876,12 +1878,11 @@ public class BuilderTileEntity extends TickingTileEntity implements IHudSupport 
         return false;
     }
 
-    private CompoundTag transferNBT(Block srcBlock,BlockEntity srcTileEntity) {
+    private CompoundTag copyBlockNBTData(Block srcBlock, BlockEntity srcTileEntity) {
         if(BlockInformation.shouldTransferNBT(srcBlock)) {
             return srcTileEntity.saveWithFullMetadata();
-        }else {
-            return srcTileEntity.saveWithoutMetadata();
         }
+        return null;
     }
 
     private void moveBlock(Level srcWorld, BlockPos srcPos, Level destWorld, BlockPos destPos, RotateMode rotMode) {
@@ -1894,6 +1895,10 @@ public class BuilderTileEntity extends TickingTileEntity implements IHudSupport 
                 return;
             }
             BlockEntity srcTileEntity = srcWorld.getBlockEntity(srcPos);
+            CompoundTag tc = null;
+            if (srcTileEntity != null) {
+                tc = copyBlockNBTData(srcBlock,srcTileEntity);
+            }
             BlockInformation srcInformation = getBlockInformation(harvester.get(), srcWorld, srcPos, srcBlock, srcTileEntity);
             if (srcInformation.getBlockLevel() == SupportBlock.SupportStatus.STATUS_ERROR) {
                 return;
@@ -1909,16 +1914,14 @@ public class BuilderTileEntity extends TickingTileEntity implements IHudSupport 
                 energyStorage.consumeEnergy(rfNeeded);
             }
 
-            CompoundTag tc = null;
             if (srcTileEntity != null) {
-                tc = transferNBT(srcBlock,srcTileEntity);
                 srcWorld.removeBlockEntity(srcPos);
             }
             clearBlock(srcWorld, srcPos);
 
             destWorld.setBlock(destPos, srcState, Block.UPDATE_ALL);
-            if (srcTileEntity != null) {
-                setTileEntityNBT(destWorld, tc, destPos, srcState);
+            if (tc != null) {
+                configureTileEntityNBT(destWorld, tc, destPos, srcState);
             }
             if (!silent) {
                 SoundType srcSoundType = srcBlock.getSoundType(srcState, srcWorld, srcPos, null);
@@ -1941,6 +1944,21 @@ public class BuilderTileEntity extends TickingTileEntity implements IHudSupport 
         }
     }
 
+    private void configureTileEntityNBT(Level destWorld, CompoundTag tc, BlockPos destpos, BlockState newDestState) {
+        BlockEntity tileEntity = destWorld.getBlockEntity(destpos);
+        if (tileEntity != null) {
+            tileEntity.load(tc);
+            tileEntity.setChanged();
+            destWorld.sendBlockUpdated(destpos, newDestState, newDestState, Block.UPDATE_ALL);
+        }
+    }
+    private void transferBlockNBTDataTo(Level destWorld, CompoundTag tc, BlockPos destpos, BlockState newDestState) {
+        tc.putInt("x", destpos.getX());
+        tc.putInt("y", destpos.getY());
+        tc.putInt("z", destpos.getZ());
+        configureTileEntityNBT(destWorld, tc, destpos, newDestState);
+    }
+
     private void swapBlock(Level srcWorld, BlockPos srcPos, Level destWorld, BlockPos dstPos) {
         BlockState oldSrcState = srcWorld.getBlockState(srcPos);
         Block srcBlock = oldSrcState.getBlock();
@@ -1952,10 +1970,10 @@ public class BuilderTileEntity extends TickingTileEntity implements IHudSupport 
         CompoundTag srcTC = null;
         CompoundTag dstTC = null;
         if (srcTileEntity != null) {
-            srcTC = transferNBT(srcBlock,srcTileEntity);
+            srcTC = copyBlockNBTData(srcBlock,srcTileEntity);
         }
         if (dstTileEntity != null) {
-            dstTC = transferNBT(dstBlock,dstTileEntity);
+            dstTC = copyBlockNBTData(dstBlock,dstTileEntity);
         }
         if (isEmpty(oldSrcState, srcBlock) && isEmpty(oldDstState, dstBlock)) {
             return;
@@ -1992,14 +2010,14 @@ public class BuilderTileEntity extends TickingTileEntity implements IHudSupport 
         destWorld.setBlock(dstPos, newDstState, Block.UPDATE_ALL);
 //        destWorld.setBlockMetadataWithNotify(destX, destY, destZ, srcMeta, 3);
         if (srcTC != null) {
-            setTileEntityNBT(destWorld, srcTC, dstPos, newDstState);
+            configureTileEntityNBT(destWorld, srcTC, dstPos, newDstState);
         }
 
         BlockState newSrcState = oldDstState;
         srcWorld.setBlock(srcPos, newSrcState, Block.UPDATE_ALL);
 //        world.setBlockMetadataWithNotify(x, y, z, dstMeta, 3);
         if (dstTC != null) {
-            setTileEntityNBT(srcWorld, dstTC, srcPos, newSrcState);
+            configureTileEntityNBT(srcWorld, dstTC, srcPos, newSrcState);
         }
 
         if (!silent) {
